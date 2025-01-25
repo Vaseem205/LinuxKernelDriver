@@ -1,6 +1,6 @@
 # Linux Kernel Driver
 
-Sample code for a Linux kernel driver.
+Sample code for a Linux kernel driver. (Loadable Kernel Module)
 
 ## Prerequisites
 
