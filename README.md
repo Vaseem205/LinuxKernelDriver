@@ -1,7 +1,80 @@
+# Linux Kernel Module: Dynamic Procfs Echo Driver
 
-# Linux Kernel Driver
+## Overview
 
-Sample code for a Linux kernel driver. (Loadable Kernel Module)
+This Linux kernel module creates a dynamic procfs entry `/proc/pyjama_driver` that allows bidirectional communication between kernel and user space. It demonstrates key concepts of Linux kernel module development, including:
+- Dynamic module loading and unloading
+- Procfs entry creation
+- Kernel-user space data transfer
+- Safe memory operations
+
+## Key Features
+
+### 1. Module Characteristics
+- **Dynamically Loadable**: Can be inserted into and removed from the kernel at runtime
+- **Procfs Interface**: Creates `/proc/pyjama_driver` for interaction
+- **Bidirectional Communication**: Supports both read and write operations
+
+### 2. Module Operations
+
+#### Initialization (`pyjama_module_init`)
+- Creates a procfs entry named `pyjama_driver`
+- Sets file permissions to `0666` (read/write for all users)
+- Registers read and write operations
+
+#### Cleanup (`pyjama_module_exit`)
+- Removes the procfs entry 
+- Ensures clean module unloading without leaving kernel references
+
+### 3. Read Operation (`vaseem_read`)
+- Triggered when user reads from `/proc/pyjama_driver`
+- Copies previously stored data from kernel space to user space
+- Uses `copy_to_user` for safe memory transfer
+- Prevents multiple reads of the same data
+
+### 4. Write Operation (`vaseem_write`)
+- Triggered when user writes to `/proc/pyjama_driver`
+- Copies data from user space to kernel space
+- Limits input to a predefined buffer size (`ECHO_BUFFER_SIZE`)
+- Handles partial data copy scenarios
+- Logs debug information about data transfer
+
+## Usage Examples
+
+### 1. Compile the Module
+```bash
+make
+```
+
+### 2. Load the Module
+```bash
+sudo insmod ldd.ko
+```
+
+### 3. Write to the Procfs Entry
+```bash
+echo "Hello, Kernel!" > /proc/pyjama_driver
+```
+
+### 4. Read from the Procfs Entry
+```bash
+cat /proc/pyjama_driver
+# Output: Hello, Kernel!
+```
+
+### 5. Unload the Module
+```bash
+sudo rmmod ldd
+```
+
+## Dependencies
+- Linux Kernel Headers
+- Kernel Module Build Tools
+
+## License
+GPL (GNU General Public License)
+
+
 
 ## Prerequisites
 
@@ -68,27 +141,10 @@ multipass start primary
   ```bash
   multipass stop primary
   ```
+### Author
+Vaseem Akram
 
-## User→Kernel→User
+### Reference
+[InPyjama](https://www.youtube.com/watch?v=iSiyDHobXHA)
 
-1. **Module Creation**:
-    - The code defines a Linux kernel module (`ldd.ko`) with `pyjama_module_init` as its initialization function and `pyjama_module_exit` as its cleanup function.
-    - The module is dynamically loadable, meaning it can be inserted into and removed from the kernel as needed using commands like `insmod` and `rmmod`.
-2. **`proc_create` and `/proc/pyjama_driver`**:
-    - When the module is inserted, it creates a **procfs entry** named `pyjama_driver` under the `/proc` directory using the `proc_create` function.
-    - The `proc_ops` structure (`driver_proc_ops`) defines how the kernel should handle operations (e.g., `read`, `write`, etc.) on this procfs entry. In this case, only the `read` operation (`proc_read`) is implemented and points to your custom function `vaseem_read`.
-3. **`vaseem_read` Function**:
-    - This function is invoked when you perform a `cat /proc/pyjama_driver`. Here's what happens:
-        - A string (`"Ack\n"`) is prepared.
-        - The `copy_to_user` function is used to copy this string from kernel space to the user space buffer (`user_space_buffer`).
-            - **Why `copy_to_user`?** Directly accessing user space memory from the kernel can lead to issues like invalid memory access. `copy_to_user` safely transfers data, preventing kernel crashes.
-        - The `offset` is updated to prevent repeated output when the `cat` command tries to read further.
-        - The function returns the number of bytes written (`len`).
-4. **How `cat` Works Here**:
-    - When you run `cat /proc/pyjama_driver`, the kernel:
-        - Looks up the `proc_ops` for the file.
-        - Calls the function assigned to `.proc_read`, which is `vaseem_read`.
-        - The string `"Ack\n"` is copied to the user-space buffer and displayed on the terminal.
-5. **Clean-Up (`proc_remove`)**:
-    - When the module is removed using `rmmod`, the `pyjama_module_exit` function is executed.
-    - This removes the `pyjama_driver` entry from `/proc`, ensuring there are no dangling references.
+
